@@ -2,189 +2,259 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Claude Dev</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #080a0f; color: #e2e8f0; font-family: monospace; height: 100vh; display: flex; flex-direction: column; font-size: 14px; }
-header { padding: 12px 16px; border-bottom: 1px solid #1e2330; background: #080a0f; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.logo { width: 32px; height: 32px; background: linear-gradient(135deg,#00e5ff,#6366f1); border-radius: 8px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
-.htitle { flex:1; }
-.htitle h1 { font-size:15px; font-weight:bold; }
-.htitle p { font-size:10px; color:#4b5563; margin-top:1px; }
-.new-btn { background:#1e2330; border:1px solid #2d3748; color:#e2e8f0; border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; font-family:monospace; }
-#context-bar { background:#0d1117; border-bottom:1px solid #1e2330; padding:8px 16px; font-size:11px; color:#6b7280; display:none; align-items:center; gap:8px; flex-shrink:0; }
-#context-text { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#msgs { flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
-.user-msg { align-self:flex-end; background:#1e3a5f; border-radius:16px 16px 4px 16px; padding:10px 14px; max-width:82%; color:#bfdbfe; line-height:1.5; }
-.bot-msg { align-self:flex-start; background:#111318; border:1px solid #1e2330; border-radius:4px 16px 16px 16px; padding:10px 14px; max-width:90%; line-height:1.6; white-space:pre-wrap; }
-.bot-msg.loading { color:#4b5563; font-style:italic; }
-.bot-msg.error { border-color:#7f1d1d; color:#f87171; }
-footer { padding:12px 16px; border-top:1px solid #1e2330; display:flex; gap:8px; flex-shrink:0; background:#080a0f; }
-input { flex:1; background:#111318; border:1px solid #1e2330; border-radius:12px; padding:12px 14px; color:#e2e8f0; font-size:14px; outline:none; font-family:monospace; }
-input:focus { border-color:#00e5ff; }
-button.send { background:linear-gradient(135deg,#00e5ff,#6366f1); color:#000; border:none; border-radius:12px; padding:12px 18px; font-size:16px; cursor:pointer; flex-shrink:0; }
-button.send:disabled { opacity:.4; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#1a1a1a;color:#ececec;font-family:'Inter',sans-serif;overflow:hidden}
+body{display:flex;flex-direction:column}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #2a2a2a;background:#1a1a1a;flex-shrink:0}
+.header-left{display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,#c96442,#e8956d);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0}
+.model-name{font-size:15px;font-weight:600;color:#ececec}
+.model-sub{font-size:11px;color:#888;margin-top:1px}
+.new-chat-btn{background:none;border:1px solid #333;color:#aaa;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px}
+.new-chat-btn:active{background:#2a2a2a}
+
+/* Context bar */
+.context-bar{background:#242424;padding:8px 16px;font-size:12px;color:#888;border-bottom:1px solid #2a2a2a;display:none;align-items:center;gap:8px;flex-shrink:0}
+.context-dot{width:6px;height:6px;border-radius:50%;background:#c96442;flex-shrink:0}
+
+/* Messages */
+.msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;-webkit-overflow-scrolling:touch}
+.msg-row{display:flex;gap:10px;align-items:flex-start}
+.msg-row.user{flex-direction:row-reverse}
+.msg-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;margin-top:2px}
+.msg-avatar.claude{background:linear-gradient(135deg,#c96442,#e8956d);color:#fff}
+.msg-avatar.user{background:#333;color:#aaa}
+.bubble{max-width:85%;padding:10px 14px;border-radius:16px;font-size:15px;line-height:1.6}
+.bubble.claude{background:#242424;border-radius:4px 16px 16px 16px;color:#ececec}
+.bubble.user{background:#2a2a2a;border-radius:16px 4px 16px 16px;color:#ececec}
+.bubble.loading{color:#666;font-style:italic}
+.bubble.error{background:#2a0a0a;color:#f87171}
+.bubble img{max-width:100%;border-radius:8px;margin-top:6px}
+.tool-pill{display:inline-flex;align-items:center;gap:4px;background:#1a2a1a;border:1px solid #2a4a2a;border-radius:20px;padding:3px 10px;font-size:12px;color:#4ade80;margin-top:6px;margin-right:4px}
+
+/* Input area */
+.input-area{padding:12px 16px;background:#1a1a1a;border-top:1px solid #2a2a2a;flex-shrink:0}
+.input-box{background:#242424;border:1px solid #333;border-radius:16px;padding:10px 14px;display:flex;align-items:flex-end;gap:8px;transition:border-color .2s}
+.input-box:focus-within{border-color:#555}
+textarea{flex:1;background:none;border:none;color:#ececec;font-size:15px;font-family:inherit;outline:none;resize:none;line-height:1.5;max-height:120px;overflow-y:auto}
+textarea::placeholder{color:#555}
+.input-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.img-btn{background:none;border:none;color:#666;cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.img-btn:active{background:#333;color:#aaa}
+.send-btn{width:34px;height:34px;background:#c96442;border:none;border-radius:50%;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:opacity .2s}
+.send-btn:disabled{opacity:.4}
+.send-btn:active{opacity:.7}
+#file-input{display:none}
+.img-preview{max-width:120px;max-height:80px;border-radius:8px;margin-bottom:8px;display:none}
 </style>
 </head>
 <body>
-<header>
-  <div class="logo">⚡</div>
-  <div class="htitle">
-    <h1>Claude Dev</h1>
-    <p id="msg-count">Nuova chat</p>
+
+<div class="header">
+  <div class="header-left">
+    <div class="avatar">C</div>
+    <div>
+      <div class="model-name">Claude Dev</div>
+      <div class="model-sub" id="status-text">android-app · live</div>
+    </div>
   </div>
-  <button class="new-btn" onclick="newChat()">+ Nuova</button>
-</header>
-
-<div id="context-bar">
-  <span>💬</span>
-  <span id="context-text"></span>
+  <button class="new-chat-btn" onclick="newChat()">&#43; Nuova</button>
 </div>
 
-<div id="msgs">
-  <div class="bot-msg">Ciao! Dimmi cosa vuoi fare con l'app Android. Modifico GitHub direttamente senza copia-incolla! 🚀</div>
+<div class="context-bar" id="ctx-bar">
+  <div class="context-dot"></div>
+  <span id="ctx-text">Contesto caricato</span>
 </div>
 
-<footer>
-  <input type="text" id="inp" placeholder="Scrivi qui..." autocomplete="off" />
-  <button class="send" id="btn">▶</button>
-</footer>
+<div class="msgs" id="msgs">
+  <div class="msg-row">
+    <div class="msg-avatar claude">C</div>
+    <div class="bubble claude">Ciao! Sono il tuo sviluppatore Android. Dimmi cosa vuoi fare con l'app e modifico GitHub direttamente — senza copia-incolla. 🚀</div>
+  </div>
+</div>
+
+<div class="input-area">
+  <img id="img-preview" class="img-preview" />
+  <div class="input-box">
+    <textarea id="inp" rows="1" placeholder="Messaggio..."></textarea>
+    <div class="input-actions">
+      <button class="img-btn" onclick="document.getElementById('file-input').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+      </button>
+      <button class="send-btn" id="send-btn" onclick="sendMsg()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+      </button>
+    </div>
+  </div>
+  <input type="file" id="file-input" accept="image/*" onchange="handleImage(this)" />
+</div>
 
 <script>
-var chatHistory = [];
+var history = [];
 var busy = false;
-var msgCount = 0;
+var pendingImage = null;
 
-// Carica da localStorage
+// Auto-resize
+var ta = document.getElementById("inp");
+ta.addEventListener("input", function(){
+  this.style.height="auto";
+  this.style.height=Math.min(this.scrollHeight,120)+"px";
+});
+ta.addEventListener("keypress", function(e){
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMsg();}
+});
+
+// Immagine
+function handleImage(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    pendingImage = e.target.result;
+    var prev = document.getElementById("img-preview");
+    prev.src = pendingImage;
+    prev.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+}
+
+// Memoria
 function loadMemory() {
   try {
-    var saved = localStorage.getItem("claude_dev_v2");
-    if (saved) {
-      var data = JSON.parse(saved);
-      chatHistory = data.history || [];
-      msgCount = Math.floor(chatHistory.length / 2);
-      if (msgCount > 0) {
-        updateContextBar();
-        document.getElementById("msg-count").textContent = msgCount + " messaggi salvati";
-        addBotMsg("Bentornato! Ho memoria di " + msgCount + " scambi precedenti. Continua pure da dove eravamo rimasti.");
+    var s = localStorage.getItem("claudedev_v3");
+    if (s) {
+      var d = JSON.parse(s);
+      history = d.history || [];
+      if (history.length > 0) {
+        document.getElementById("ctx-bar").style.display = "flex";
+        document.getElementById("ctx-text").textContent = Math.floor(history.length/2) + " messaggi in memoria";
+        document.getElementById("status-text").textContent = "android-app · " + Math.floor(history.length/2) + " msg salvati";
+        addBubble("claude", "Bentornato! Ho memoria di " + Math.floor(history.length/2) + " scambi. Continua pure da dove eravamo rimasti.");
       }
     }
-  } catch(e) {}
+  } catch(e){}
 }
 
 function saveMemory() {
   try {
-    localStorage.setItem("claude_dev_v2", JSON.stringify({
-      history: chatHistory.slice(-40),
-      ts: Date.now()
-    }));
-  } catch(e) {}
-}
-
-function updateContextBar() {
-  if (chatHistory.length === 0) {
-    document.getElementById("context-bar").style.display = "none";
-    return;
-  }
-  var last = chatHistory[chatHistory.length - 1];
-  document.getElementById("context-bar").style.display = "flex";
-  document.getElementById("context-text").textContent = "Ultimo: " + last.content.substring(0, 80);
-  document.getElementById("msg-count").textContent = Math.floor(chatHistory.length/2) + " msg";
+    localStorage.setItem("claudedev_v3", JSON.stringify({history: history.slice(-40)}));
+    document.getElementById("ctx-bar").style.display = "flex";
+    document.getElementById("ctx-text").textContent = Math.floor(history.length/2) + " messaggi in memoria";
+  } catch(e){}
 }
 
 function newChat() {
-  if (!confirm("Vuoi iniziare una nuova chat? La memoria verrà cancellata.")) return;
-  localStorage.removeItem("claude_dev_v2");
-  chatHistory = [];
-  msgCount = 0;
+  if (!confirm("Cancellare la memoria e iniziare una nuova chat?")) return;
+  localStorage.removeItem("claudedev_v3");
+  history = [];
+  pendingImage = null;
+  document.getElementById("img-preview").style.display = "none";
   document.getElementById("msgs").innerHTML = "";
-  document.getElementById("context-bar").style.display = "none";
-  document.getElementById("msg-count").textContent = "Nuova chat";
-  addBotMsg("Nuova chat iniziata! Come posso aiutarti? 🚀");
+  document.getElementById("ctx-bar").style.display = "none";
+  document.getElementById("status-text").textContent = "android-app · live";
+  addBubble("claude", "Nuova chat! Come posso aiutarti? 🚀");
 }
 
-function addBotMsg(text, cls) {
-  var d = document.createElement("div");
-  d.className = "bot-msg" + (cls ? " " + cls : "");
-  d.textContent = text;
-  var msgs = document.getElementById("msgs");
-  msgs.appendChild(d);
-  msgs.scrollTop = msgs.scrollHeight;
-  return d;
+function addBubble(role, text, imgSrc) {
+  var row = document.createElement("div");
+  row.className = "msg-row" + (role==="user"?" user":"");
+  var av = document.createElement("div");
+  av.className = "msg-avatar " + role;
+  av.textContent = role==="claude" ? "C" : "Tu";
+  var bub = document.createElement("div");
+  bub.className = "bubble " + role;
+  if (imgSrc) {
+    var img = document.createElement("img");
+    img.src = imgSrc;
+    bub.appendChild(img);
+    bub.appendChild(document.createElement("br"));
+  }
+  bub.appendChild(document.createTextNode(text));
+  row.appendChild(av);
+  row.appendChild(bub);
+  document.getElementById("msgs").appendChild(row);
+  document.getElementById("msgs").scrollTop = 99999;
+  return bub;
 }
-
-function addUserMsg(text) {
-  var d = document.createElement("div");
-  d.className = "user-msg";
-  d.textContent = text;
-  var msgs = document.getElementById("msgs");
-  msgs.appendChild(d);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-document.getElementById("btn").addEventListener("click", sendMsg);
-document.getElementById("inp").addEventListener("keypress", function(e) {
-  if (e.key === "Enter") sendMsg();
-});
 
 function sendMsg() {
   if (busy) return;
-  var text = document.getElementById("inp").value.trim();
-  if (!text) return;
+  var text = ta.value.trim();
+  var img = pendingImage;
+  if (!text && !img) return;
 
-  document.getElementById("inp").value = "";
+  ta.value = "";
+  ta.style.height = "auto";
   busy = true;
-  document.getElementById("btn").disabled = true;
+  document.getElementById("send-btn").disabled = true;
 
-  addUserMsg(text);
-  var botDiv = addBotMsg("Elaboro...", "loading");
+  addBubble("user", text || "📷 Immagine", img);
+  pendingImage = null;
+  document.getElementById("img-preview").style.display = "none";
 
-  var payload = JSON.stringify({
-    pw: "colab1234",
-    message: text,
-    history: chatHistory.slice(-20)
-  });
+  var loadBub = addBubble("claude", "...");
+  loadBub.className = "bubble claude loading";
+
+  var msgContent = text;
+  if (img) msgContent = (text ? text + "\n" : "") + "[Immagine allegata]";
 
   var xhr = new XMLHttpRequest();
   xhr.open("POST", "/chat", true);
   xhr.setRequestHeader("Content-Type", "application/json");
-  xhr.timeout = 60000;
+  xhr.timeout = 90000;
 
   xhr.onload = function() {
     try {
       var data = JSON.parse(xhr.responseText);
-      var reply = data.reply || data.error || "Errore sconosciuto";
-      botDiv.textContent = reply;
-      botDiv.className = "bot-msg";
-      chatHistory.push({role:"user", content:text});
-      chatHistory.push({role:"assistant", content:reply});
+      var reply = data.reply || data.error || "Errore";
+      loadBub.textContent = reply;
+      loadBub.className = "bubble claude";
+      if (data.tool_results && data.tool_results.length) {
+        data.tool_results.forEach(function(t) {
+          var pill = document.createElement("span");
+          pill.className = "tool-pill";
+          pill.textContent = (t.error?"❌":"✅") + " " + t.tool;
+          loadBub.appendChild(document.createElement("br"));
+          loadBub.appendChild(pill);
+        });
+      }
+      history.push({role:"user", content: msgContent});
+      history.push({role:"assistant", content: reply});
       saveMemory();
-      updateContextBar();
     } catch(e) {
-      botDiv.textContent = "Errore parsing: " + e.message;
-      botDiv.className = "bot-msg error";
+      loadBub.textContent = "Errore: " + e.message;
+      loadBub.className = "bubble claude error";
     }
     busy = false;
-    document.getElementById("btn").disabled = false;
+    document.getElementById("send-btn").disabled = false;
     document.getElementById("msgs").scrollTop = 99999;
   };
 
   xhr.onerror = function() {
-    botDiv.textContent = "Errore di rete";
-    botDiv.className = "bot-msg error";
+    loadBub.textContent = "Errore di rete";
+    loadBub.className = "bubble claude error";
     busy = false;
-    document.getElementById("btn").disabled = false;
+    document.getElementById("send-btn").disabled = false;
   };
 
   xhr.ontimeout = function() {
-    botDiv.textContent = "Timeout - riprova";
-    botDiv.className = "bot-msg error";
+    loadBub.textContent = "Timeout — riprova";
+    loadBub.className = "bubble claude error";
     busy = false;
-    document.getElementById("btn").disabled = false;
+    document.getElementById("send-btn").disabled = false;
   };
 
-  xhr.send(payload);
+  xhr.send(JSON.stringify({pw:"colab1234", message: msgContent, history: history.slice(-20)}));
 }
 
 loadMemory();
