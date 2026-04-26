@@ -52,7 +52,7 @@ Tool disponibili (chiamali con JSON nel formato {{"tool": "nome", "params": {...
     # Chiama Claude
     r = req.post("https://api.anthropic.com/v1/messages",
         headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json"},
-        json={"model": "claude-3-haiku-20240307", "max_tokens": 2000, "system": system, "messages": messages}
+        json={"model": "claude-haiku-4-5-20251001", "max_tokens": 2000, "system": system, "messages": messages}
     )
     
     if r.status_code != 200:
