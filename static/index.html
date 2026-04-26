@@ -6,38 +6,124 @@
 <title>Claude Dev</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #080a0f; color: #e2e8f0; font-family: monospace; height: 100vh; display: flex; flex-direction: column; }
-header { padding: 14px 16px; border-bottom: 1px solid #1e2330; display: flex; align-items: center; gap: 10px; background: #080a0f; }
-.logo { width: 34px; height: 34px; background: linear-gradient(135deg, #00e5ff, #6366f1); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-h1 { font-size: 15px; font-weight: bold; }
-#msgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-.user-msg { align-self: flex-end; background: #1e3a5f; border-radius: 16px 16px 4px 16px; padding: 10px 14px; max-width: 80%; font-size: 14px; color: #bfdbfe; }
-.bot-msg { align-self: flex-start; background: #111318; border: 1px solid #1e2330; border-radius: 4px 16px 16px 16px; padding: 10px 14px; max-width: 90%; font-size: 14px; line-height: 1.6; }
-footer { padding: 12px 16px; border-top: 1px solid #1e2330; display: flex; gap: 10px; }
-input { flex: 1; background: #111318; border: 1px solid #1e2330; border-radius: 12px; padding: 12px 16px; color: #e2e8f0; font-size: 14px; outline: none; }
-button { background: linear-gradient(135deg, #00e5ff, #6366f1); color: #000; border: none; border-radius: 12px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer; }
+body { background: #080a0f; color: #e2e8f0; font-family: monospace; height: 100vh; display: flex; flex-direction: column; font-size: 14px; }
+header { padding: 12px 16px; border-bottom: 1px solid #1e2330; background: #080a0f; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.logo { width: 32px; height: 32px; background: linear-gradient(135deg,#00e5ff,#6366f1); border-radius: 8px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.htitle { flex:1; }
+.htitle h1 { font-size:15px; font-weight:bold; }
+.htitle p { font-size:10px; color:#4b5563; margin-top:1px; }
+.new-btn { background:#1e2330; border:1px solid #2d3748; color:#e2e8f0; border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; font-family:monospace; }
+#context-bar { background:#0d1117; border-bottom:1px solid #1e2330; padding:8px 16px; font-size:11px; color:#6b7280; display:none; align-items:center; gap:8px; flex-shrink:0; }
+#context-text { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#msgs { flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+.user-msg { align-self:flex-end; background:#1e3a5f; border-radius:16px 16px 4px 16px; padding:10px 14px; max-width:82%; color:#bfdbfe; line-height:1.5; }
+.bot-msg { align-self:flex-start; background:#111318; border:1px solid #1e2330; border-radius:4px 16px 16px 16px; padding:10px 14px; max-width:90%; line-height:1.6; white-space:pre-wrap; }
+.bot-msg.loading { color:#4b5563; font-style:italic; }
+.bot-msg.error { border-color:#7f1d1d; color:#f87171; }
+footer { padding:12px 16px; border-top:1px solid #1e2330; display:flex; gap:8px; flex-shrink:0; background:#080a0f; }
+input { flex:1; background:#111318; border:1px solid #1e2330; border-radius:12px; padding:12px 14px; color:#e2e8f0; font-size:14px; outline:none; font-family:monospace; }
+input:focus { border-color:#00e5ff; }
+button.send { background:linear-gradient(135deg,#00e5ff,#6366f1); color:#000; border:none; border-radius:12px; padding:12px 18px; font-size:16px; cursor:pointer; flex-shrink:0; }
+button.send:disabled { opacity:.4; }
 </style>
 </head>
 <body>
 <header>
   <div class="logo">⚡</div>
-  <div><h1>Claude Dev</h1><p style="font-size:11px;color:#4b5563">android-app</p></div>
+  <div class="htitle">
+    <h1>Claude Dev</h1>
+    <p id="msg-count">Nuova chat</p>
+  </div>
+  <button class="new-btn" onclick="newChat()">+ Nuova</button>
 </header>
-<div id="msgs">
-  <div class="bot-msg">Ciao! Dimmi cosa vuoi fare con l'app Android. Modifico GitHub direttamente!</div>
+
+<div id="context-bar">
+  <span>💬</span>
+  <span id="context-text"></span>
 </div>
+
+<div id="msgs">
+  <div class="bot-msg">Ciao! Dimmi cosa vuoi fare con l'app Android. Modifico GitHub direttamente senza copia-incolla! 🚀</div>
+</div>
+
 <footer>
-  <input type="text" id="inp" placeholder="Scrivi qui..." />
-  <button id="btn">▶</button>
+  <input type="text" id="inp" placeholder="Scrivi qui..." autocomplete="off" />
+  <button class="send" id="btn">▶</button>
 </footer>
+
 <script>
-var history = [];
+var chatHistory = [];
 var busy = false;
+var msgCount = 0;
 
-document.getElementById("btn").addEventListener("click", function() {
-  sendMsg();
-});
+// Carica da localStorage
+function loadMemory() {
+  try {
+    var saved = localStorage.getItem("claude_dev_v2");
+    if (saved) {
+      var data = JSON.parse(saved);
+      chatHistory = data.history || [];
+      msgCount = Math.floor(chatHistory.length / 2);
+      if (msgCount > 0) {
+        updateContextBar();
+        document.getElementById("msg-count").textContent = msgCount + " messaggi salvati";
+        addBotMsg("Bentornato! Ho memoria di " + msgCount + " scambi precedenti. Continua pure da dove eravamo rimasti.");
+      }
+    }
+  } catch(e) {}
+}
 
+function saveMemory() {
+  try {
+    localStorage.setItem("claude_dev_v2", JSON.stringify({
+      history: chatHistory.slice(-40),
+      ts: Date.now()
+    }));
+  } catch(e) {}
+}
+
+function updateContextBar() {
+  if (chatHistory.length === 0) {
+    document.getElementById("context-bar").style.display = "none";
+    return;
+  }
+  var last = chatHistory[chatHistory.length - 1];
+  document.getElementById("context-bar").style.display = "flex";
+  document.getElementById("context-text").textContent = "Ultimo: " + last.content.substring(0, 80);
+  document.getElementById("msg-count").textContent = Math.floor(chatHistory.length/2) + " msg";
+}
+
+function newChat() {
+  if (!confirm("Vuoi iniziare una nuova chat? La memoria verrà cancellata.")) return;
+  localStorage.removeItem("claude_dev_v2");
+  chatHistory = [];
+  msgCount = 0;
+  document.getElementById("msgs").innerHTML = "";
+  document.getElementById("context-bar").style.display = "none";
+  document.getElementById("msg-count").textContent = "Nuova chat";
+  addBotMsg("Nuova chat iniziata! Come posso aiutarti? 🚀");
+}
+
+function addBotMsg(text, cls) {
+  var d = document.createElement("div");
+  d.className = "bot-msg" + (cls ? " " + cls : "");
+  d.textContent = text;
+  var msgs = document.getElementById("msgs");
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+  return d;
+}
+
+function addUserMsg(text) {
+  var d = document.createElement("div");
+  d.className = "user-msg";
+  d.textContent = text;
+  var msgs = document.getElementById("msgs");
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+document.getElementById("btn").addEventListener("click", sendMsg);
 document.getElementById("inp").addEventListener("keypress", function(e) {
   if (e.key === "Enter") sendMsg();
 });
@@ -46,46 +132,62 @@ function sendMsg() {
   if (busy) return;
   var text = document.getElementById("inp").value.trim();
   if (!text) return;
-  
+
   document.getElementById("inp").value = "";
   busy = true;
   document.getElementById("btn").disabled = true;
-  
-  var msgs = document.getElementById("msgs");
-  
-  var userDiv = document.createElement("div");
-  userDiv.className = "user-msg";
-  userDiv.textContent = text;
-  msgs.appendChild(userDiv);
-  
-  var botDiv = document.createElement("div");
-  botDiv.className = "bot-msg";
-  botDiv.textContent = "Elaboro...";
-  msgs.appendChild(botDiv);
-  msgs.scrollTop = msgs.scrollHeight;
-  
-  history.push({role: "user", content: text});
-  
-  fetch("/chat", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({pw: "colab1234", message: text, history: history.slice(-20)})
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    var reply = data.reply || data.error || "Errore";
-    botDiv.textContent = reply;
-    history.push({role: "assistant", content: reply});
-    msgs.scrollTop = msgs.scrollHeight;
-    busy = false;
-    document.getElementById("btn").disabled = false;
-  })
-  .catch(function(e) {
-    botDiv.textContent = "Errore: " + e.message;
-    busy = false;
-    document.getElementById("btn").disabled = false;
+
+  addUserMsg(text);
+  var botDiv = addBotMsg("Elaboro...", "loading");
+
+  var payload = JSON.stringify({
+    pw: "colab1234",
+    message: text,
+    history: chatHistory.slice(-20)
   });
+
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "/chat", true);
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.timeout = 60000;
+
+  xhr.onload = function() {
+    try {
+      var data = JSON.parse(xhr.responseText);
+      var reply = data.reply || data.error || "Errore sconosciuto";
+      botDiv.textContent = reply;
+      botDiv.className = "bot-msg";
+      chatHistory.push({role:"user", content:text});
+      chatHistory.push({role:"assistant", content:reply});
+      saveMemory();
+      updateContextBar();
+    } catch(e) {
+      botDiv.textContent = "Errore parsing: " + e.message;
+      botDiv.className = "bot-msg error";
+    }
+    busy = false;
+    document.getElementById("btn").disabled = false;
+    document.getElementById("msgs").scrollTop = 99999;
+  };
+
+  xhr.onerror = function() {
+    botDiv.textContent = "Errore di rete";
+    botDiv.className = "bot-msg error";
+    busy = false;
+    document.getElementById("btn").disabled = false;
+  };
+
+  xhr.ontimeout = function() {
+    botDiv.textContent = "Timeout - riprova";
+    botDiv.className = "bot-msg error";
+    busy = false;
+    document.getElementById("btn").disabled = false;
+  };
+
+  xhr.send(payload);
 }
+
+loadMemory();
 </script>
 </body>
 </html>
