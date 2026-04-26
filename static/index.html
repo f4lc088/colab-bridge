@@ -2,56 +2,137 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Claude Dev</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@700;800&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#080a0f;--surface:#111318;--border:#1e2330;--accent:#00e5ff;--green:#00ffa3;--text:#e2e8f0;--muted:#4b5563}
-body{background:var(--bg);color:var(--text);font-family:"JetBrains Mono",monospace;height:100vh;display:flex;flex-direction:column}
-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:rgba(8,10,15,.97)}
-.logo{width:30px;height:30px;background:linear-gradient(135deg,#00e5ff,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
-h1{font-family:"Syne",sans-serif;font-size:14px;font-weight:800}
-.dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);margin-left:auto;animation:pulse 2s infinite}
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#080a0f;--surface:#111318;--border:#1e2330;--accent:#00e5ff;--green:#00ffa3;--text:#e2e8f0;--muted:#4b5563;--radius:14px}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:"JetBrains Mono",monospace;display:flex;flex-direction:column}
+header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--bg);flex-shrink:0}
+.logo{width:36px;height:36px;background:linear-gradient(135deg,#00e5ff,#6366f1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.hinfo{flex:1}
+.hinfo h1{font-family:"Syne",sans-serif;font-size:16px;font-weight:800;letter-spacing:-0.3px}
+.hinfo p{font-size:11px;color:var(--muted);margin-top:1px}
+.status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-#msgs{flex:1;overflow-y:auto;padding:12px 16px}
-.msg{margin-bottom:10px}
-.user{display:flex;justify-content:flex-end}
-.user .b{background:#1e3a5f;border-radius:12px 12px 2px 12px;padding:10px 14px;max-width:80%;color:#bfdbfe;font-size:13px;line-height:1.5}
-.bot .b{background:var(--surface);border:1px solid var(--border);border-radius:2px 12px 12px 12px;padding:10px 14px;font-size:13px;line-height:1.6}
-.thinking{color:var(--muted);font-size:12px;font-style:italic}
-.tool-result{background:#0d1117;border:1px solid #2d3748;border-radius:6px;padding:8px;margin-top:6px;font-size:11px;color:#7dd3fc}
-footer{padding:10px 16px;border-top:1px solid var(--border);background:rgba(8,10,15,.97)}
-.row{display:flex;gap:8px}
-textarea{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none;resize:none;line-height:1.5}
-button{background:linear-gradient(135deg,var(--accent),#6366f1);color:#000;border:none;border-radius:10px;padding:0 16px;font-size:16px;cursor:pointer;flex-shrink:0}
-button:disabled{background:var(--surface);color:var(--muted)}
+#msgs{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+.msg-user{display:flex;justify-content:flex-end}
+.msg-user .b{background:linear-gradient(135deg,#1e3a5f,#1e2d4f);border-radius:18px 18px 4px 18px;padding:12px 16px;max-width:82%;color:#bfdbfe;font-size:14px;line-height:1.5}
+.msg-bot .b{background:var(--surface);border:1px solid var(--border);border-radius:4px 18px 18px 18px;padding:12px 16px;font-size:14px;line-height:1.6}
+.thinking{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;padding:10px 0}
+.dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);animation:bounce .8s infinite;margin:0 2px}
+.dots span:nth-child(2){animation-delay:.15s}
+.dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.tool-badge{display:inline-flex;align-items:center;gap:4px;background:#0d1117;border:1px solid #2d3748;border-radius:6px;padding:4px 8px;margin-top:6px;font-size:11px;color:#7dd3fc}
+footer{padding:12px 16px;border-top:1px solid var(--border);background:var(--bg);flex-shrink:0}
+.input-wrap{display:flex;gap:10px;align-items:flex-end}
+.textarea-wrap{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;transition:border-color .2s}
+.textarea-wrap:focus-within{border-color:var(--accent)}
+textarea{width:100%;background:transparent;border:none;color:var(--text);font-size:14px;font-family:inherit;outline:none;resize:none;line-height:1.5;max-height:120px;overflow-y:auto}
+.send{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),#6366f1);color:#000;border:none;border-radius:12px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s,opacity .2s}
+.send:active{transform:scale(.93)}
+.send:disabled{opacity:.4;transform:none}
+.memory-bar{background:#0d1117;border:1px solid #1e2330;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.clear-btn{margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:10px;cursor:pointer;font-family:inherit}
 </style>
 </head>
 <body>
 <header>
   <div class="logo">⚡</div>
-  <div><h1>Claude Dev</h1><p style="font-size:10px;color:var(--muted)">android-app</p></div>
-  <div class="dot"></div>
+  <div class="hinfo">
+    <h1>Claude Dev</h1>
+    <p id="repo-label">android-app</p>
+  </div>
+  <div class="status">
+    <div class="dot"></div>
+    <span>live</span>
+  </div>
 </header>
+
 <div id="msgs">
-  <div class="msg bot"><div class="b">Ciao! Dimmi cosa vuoi fare con l'app Android. Posso leggere e modificare file su GitHub direttamente. </div></div>
+  <div class="memory-bar" id="memory-bar" style="display:none">
+    <span>💾</span>
+    <span id="memory-info">Memoria caricata</span>
+    <button class="clear-btn" onclick="clearMemory()">Reset</button>
+  </div>
 </div>
+
 <footer>
-  <div class="row">
-    <textarea id="inp" rows="2" placeholder="Es: aggiungi un bottone rosso..."></textarea>
-    <button id="btn" onclick="send()">&#9654;</button>
+  <div class="input-wrap">
+    <div class="textarea-wrap">
+      <textarea id="inp" rows="1" placeholder="Dimmi cosa fare con l'app..."></textarea>
+    </div>
+    <button class="send" id="btn" onclick="send()">&#9654;</button>
   </div>
 </footer>
+
 <script>
 const BRIDGE = "https://colab-bridge.onrender.com";
 const PW = "colab1234";
+const MEMORY_KEY = "claude_dev_memory";
 let chatHistory = [];
 let busy = false;
 
+// Auto-resize textarea
+const inp = document.getElementById("inp");
+inp.addEventListener("input", function() {
+  this.style.height = "auto";
+  this.style.height = Math.min(this.scrollHeight, 120) + "px";
+});
+
+// Carica memoria
+function loadMemory() {
+  try {
+    const saved = localStorage.getItem(MEMORY_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      chatHistory = data.history || [];
+      const bar = document.getElementById("memory-bar");
+      bar.style.display = "flex";
+      document.getElementById("memory-info").textContent = 
+        "Memoria: " + chatHistory.length/2 + " messaggi salvati";
+      
+      // Mostra ultimo messaggio
+      if (chatHistory.length > 0) {
+        addMsg("bot", "✅ Contesto ripristinato! Ho memoria degli ultimi " + 
+          Math.floor(chatHistory.length/2) + " scambi. Come posso continuare?");
+      }
+    } else {
+      addMsg("bot", "Ciao! Sono il tuo sviluppatore Android. Dimmi cosa vuoi fare con l'app e modifico GitHub direttamente. 🚀");
+    }
+  } catch(e) {
+    addMsg("bot", "Ciao! Come posso aiutarti con l'app Android?");
+  }
+}
+
+function saveMemory() {
+  try {
+    const toSave = chatHistory.slice(-30); // Ultimi 30 messaggi
+    localStorage.setItem(MEMORY_KEY, JSON.stringify({history: toSave, ts: Date.now()}));
+    const bar = document.getElementById("memory-bar");
+    bar.style.display = "flex";
+    document.getElementById("memory-info").textContent = 
+      "Memoria: " + toSave.length/2 + " messaggi salvati";
+  } catch(e) {}
+}
+
+function clearMemory() {
+  localStorage.removeItem(MEMORY_KEY);
+  chatHistory = [];
+  document.getElementById("memory-bar").style.display = "none";
+  document.getElementById("msgs").innerHTML = "";
+  addMsg("bot", "Memoria cancellata. Riparti da zero!");
+}
+
 function addMsg(role, html) {
   const d = document.createElement("div");
-  d.className = "msg " + role;
+  d.className = "msg-" + role;
   d.innerHTML = "<div class='b'>" + html + "</div>";
   const msgs = document.getElementById("msgs");
   msgs.appendChild(d);
@@ -60,22 +141,27 @@ function addMsg(role, html) {
 }
 
 async function send() {
-  const inp = document.getElementById("inp");
   const btn = document.getElementById("btn");
   const text = inp.value.trim();
   if (!text || busy) return;
   busy = true;
   btn.disabled = true;
   inp.value = "";
+  inp.style.height = "auto";
 
-  addMsg("user", text);
-  const thinking = addMsg("bot", "<span class='thinking'>Sto elaborando...</span>");
+  addMsg("user", text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"));
+
+  const thinking = document.createElement("div");
+  thinking.className = "thinking";
+  thinking.innerHTML = "<span>Claude sta elaborando</span><div class='dots'><span></span><span></span><span></span></div>";
+  document.getElementById("msgs").appendChild(thinking);
+  document.getElementById("msgs").scrollTop = 99999;
 
   try {
     const res = await fetch(BRIDGE + "/chat", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({pw: PW, message: text, history: chatHistory})
+      body: JSON.stringify({pw: PW, message: text, history: chatHistory.slice(-20)})
     });
     const data = await res.json();
     thinking.remove();
@@ -84,33 +170,42 @@ async function send() {
       addMsg("bot", "Errore: " + data.error);
     } else {
       const reply = data.reply || "";
-      let html = reply.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
-      
+      let html = reply
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/
+/g,"<br>")
+        .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>");
+
       if (data.tool_results && data.tool_results.length > 0) {
         data.tool_results.forEach(function(t) {
-          const res_str = JSON.stringify(t.result || t.error || "").substring(0, 200);
-          html += "<div class='tool-result'>Tool: " + t.tool + " - " + res_str + "</div>";
+          const ok = !t.error;
+          html += "<div class='tool-badge'>" + (ok?"✅":"❌") + " " + t.tool + "</div>";
         });
       }
       addMsg("bot", html);
-      chatHistory.push({role: "user", content: text});
-      chatHistory.push({role: "assistant", content: reply});
-      if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+      chatHistory.push({role:"user", content: text});
+      chatHistory.push({role:"assistant", content: reply});
+      saveMemory();
     }
   } catch(e) {
     thinking.remove();
-    addMsg("bot", "Errore di connessione: " + e.message);
+    addMsg("bot", "Errore connessione: " + e.message);
   }
   busy = false;
   btn.disabled = false;
+  document.getElementById("msgs").scrollTop = 99999;
 }
 
-document.getElementById("inp").addEventListener("keydown", function(e) {
+inp.addEventListener("keydown", function(e) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     send();
   }
 });
+
+loadMemory();
 </script>
 </body>
 </html>
