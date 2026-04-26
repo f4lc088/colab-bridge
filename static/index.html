@@ -35,26 +35,27 @@ button:disabled{background:var(--surface);color:var(--muted)}
   <div class="dot"></div>
 </header>
 <div id="msgs">
-  <div class="msg bot"><div class="b">Ciao! Dimmi cosa vuoi fare con l'app Android. Posso leggere e modificare file, controllare le build e molto altro. 🚀</div></div>
+  <div class="msg bot"><div class="b">Ciao! Dimmi cosa vuoi fare con l'app Android. Posso leggere e modificare file su GitHub direttamente. </div></div>
 </div>
 <footer>
   <div class="row">
     <textarea id="inp" rows="2" placeholder="Es: aggiungi un bottone rosso..."></textarea>
-    <button id="btn" onclick="send()">▶</button>
+    <button id="btn" onclick="send()">&#9654;</button>
   </div>
 </footer>
 <script>
 const BRIDGE = "https://colab-bridge.onrender.com";
 const PW = "colab1234";
-let history = [];
+let chatHistory = [];
 let busy = false;
 
 function addMsg(role, html) {
   const d = document.createElement("div");
-  d.className = `msg ${role}`;
-  d.innerHTML = `<div class="b">${html}</div>`;
-  document.getElementById("msgs").appendChild(d);
-  document.getElementById("msgs").scrollTop = 99999;
+  d.className = "msg " + role;
+  d.innerHTML = "<div class='b'>" + html + "</div>";
+  const msgs = document.getElementById("msgs");
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
   return d;
 }
 
@@ -63,39 +64,52 @@ async function send() {
   const btn = document.getElementById("btn");
   const text = inp.value.trim();
   if (!text || busy) return;
-  busy = true; btn.disabled = true; inp.value = "";
+  busy = true;
+  btn.disabled = true;
+  inp.value = "";
 
   addMsg("user", text);
-  const thinking = addMsg("bot", '<span class="thinking">⚙️ Sto elaborando...</span>');
+  const thinking = addMsg("bot", "<span class='thinking'>Sto elaborando...</span>");
 
   try {
-    const r = await fetch(`${BRIDGE}/chat`, {
+    const res = await fetch(BRIDGE + "/chat", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({pw: PW, message: text, history})
+      body: JSON.stringify({pw: PW, message: text, history: chatHistory})
     });
-    const d = await r.json();
+    const data = await res.json();
     thinking.remove();
 
-    let html = d.reply.replace(/\n/g, "<br>");
-    if (d.tool_results && d.tool_results.length) {
-      d.tool_results.forEach(t => {
-        html += `<div class="tool-result">🔧 ${t.tool}: ${JSON.stringify(t.result).slice(0,200)}</div>`;
-      });
+    if (data.error) {
+      addMsg("bot", "Errore: " + data.error);
+    } else {
+      const reply = data.reply || "";
+      let html = reply.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+      
+      if (data.tool_results && data.tool_results.length > 0) {
+        data.tool_results.forEach(function(t) {
+          const res_str = JSON.stringify(t.result || t.error || "").substring(0, 200);
+          html += "<div class='tool-result'>Tool: " + t.tool + " - " + res_str + "</div>";
+        });
+      }
+      addMsg("bot", html);
+      chatHistory.push({role: "user", content: text});
+      chatHistory.push({role: "assistant", content: reply});
+      if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
     }
-    addMsg("bot", html);
-    history.push({role:"user", content:text});
-    history.push({role:"assistant", content:d.reply});
-    if (history.length > 20) history = history.slice(-20);
   } catch(e) {
     thinking.remove();
-    addMsg("bot", `❌ Errore: ${e.message}`);
+    addMsg("bot", "Errore di connessione: " + e.message);
   }
-  busy = false; btn.disabled = false;
+  busy = false;
+  btn.disabled = false;
 }
 
-document.getElementById("inp").addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+document.getElementById("inp").addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
 });
 </script>
 </body>
