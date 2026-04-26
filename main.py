@@ -1,24 +1,115 @@
-
 import requests as req, base64, json, time, uuid, os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static")
 CORS(app)
 
 PASSWORD = os.environ.get("BRIDGE_PASSWORD", "colab1234")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+ANTHROPIC_KEY = os.environ.get("ANTHROPIC_KEY", "")
+GITHUB_USER = "f4lc088"
+GITHUB_REPO = "android-app"
+
 jobs = {}
 queue = []
 history = []
 
-def github_headers():
+def gh():
     return {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+
+@app.route("/")
+def home():
+    return send_from_directory("static", "index.html")
 
 @app.route("/ping")
 def ping():
     return jsonify({"status": "ok"})
 
+@app.route("/chat", methods=["POST"])
+def chat():
+    """Riceve messaggio utente, chiama Claude, esegue azioni GitHub"""
+    data = request.json or {}
+    if data.get("pw") != PASSWORD:
+        return jsonify({"error": "unauthorized"}), 403
+    
+    user_msg = data.get("message", "")
+    history_msgs = data.get("history", [])
+    
+    system = f"""Sei un assistente Android developer. Hai accesso al repo GitHub {GITHUB_USER}/{GITHUB_REPO}.
+Quando l utente ti chiede modifiche all app, usa i tool disponibili per leggere e modificare i file.
+Rispondi sempre in italiano. Dopo ogni modifica di file, di all utente cosa hai fatto.
+
+Tool disponibili (chiamali con JSON nel formato {{"tool": "nome", "params": {...}}}):
+- read_file: {{"path": "percorso"}} - legge un file dal repo
+- write_file: {{"path": "percorso", "content": "contenuto", "message": "commit msg"}} - scrive un file
+- list_files: {{"path": ""}} - lista file in una cartella
+- build_status: {{}} - controlla stato ultima build
+"""
+
+    messages = history_msgs + [{"role": "user", "content": user_msg}]
+    
+    # Chiama Claude
+    r = req.post("https://api.anthropic.com/v1/messages",
+        headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json"},
+        json={"model": "claude-sonnet-4-20250514", "max_tokens": 2000, "system": system, "messages": messages}
+    )
+    
+    if r.status_code != 200:
+        return jsonify({"error": "Claude API error", "detail": r.text}), 500
+    
+    reply = r.json()["content"][0]["text"]
+    
+    # Esegui tool calls se presenti
+    tool_results = []
+    import re
+    tool_calls = re.findall(r'\{\s*"tool":\s*"([^"]+)"[^}]*"params":\s*(\{[^}]*\})\s*\}', reply)
+    
+    for tool_name, params_str in tool_calls:
+        try:
+            params = json.loads(params_str)
+            result = execute_tool(tool_name, params)
+            tool_results.append({"tool": tool_name, "result": result})
+        except Exception as e:
+            tool_results.append({"tool": tool_name, "error": str(e)})
+    
+    return jsonify({"reply": reply, "tool_results": tool_results})
+
+def execute_tool(name, params):
+    if name == "read_file":
+        r = req.get(f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{params['path']}", headers=gh())
+        if r.status_code == 200:
+            return base64.b64decode(r.json()["content"]).decode()
+        return f"Errore: {r.status_code}"
+    
+    elif name == "write_file":
+        path = params["path"]
+        content = params["content"]
+        message = params.get("message", "update by Claude")
+        r = req.get(f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{path}", headers=gh())
+        payload = {"message": message, "content": base64.b64encode(content.encode()).decode()}
+        if r.status_code == 200:
+            payload["sha"] = r.json()["sha"]
+        r2 = req.put(f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{path}", headers=gh(), json=payload)
+        return "OK" if r2.status_code in [200,201] else f"Errore: {r2.status_code}"
+    
+    elif name == "list_files":
+        path = params.get("path", "")
+        r = req.get(f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{path}", headers=gh())
+        if r.status_code == 200:
+            return [f["name"] for f in r.json()]
+        return []
+    
+    elif name == "build_status":
+        r = req.get(f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/actions/runs", headers=gh())
+        runs = r.json().get("workflow_runs", [])
+        if not runs: return "Nessuna build"
+        latest = runs[0]
+        return {"status": latest["status"], "conclusion": latest.get("conclusion"), "url": latest["html_url"]}
+    
+    return "Tool non trovato"
+
+# ── Job queue (per Colab) ──
 @app.route("/submit", methods=["POST"])
 def submit():
     data = request.json or {}
@@ -30,7 +121,7 @@ def submit():
 
 @app.route("/next_job")
 def next_job():
-    if request.args.get("pw") != PASSWORD: return jsonify({"error": "unauthorized"}), 403
+    if request.args.get("pw") != PASSWORD: return jsonify({"job": None})
     if not queue: return jsonify({"job": None})
     job_id = queue[0]
     job = jobs.get(job_id)
@@ -52,48 +143,6 @@ def result(job_id):
     job = jobs.get(job_id)
     if not job: return jsonify({"status": "not_found"}), 404
     return jsonify(job)
-
-@app.route("/github/update_file", methods=["POST"])
-def github_update_file():
-    """Claude chiama questo endpoint per modificare file su GitHub"""
-    data = request.json or {}
-    if data.get("pw") != PASSWORD: return jsonify({"error": "unauthorized"}), 403
-    repo = data.get("repo")
-    path = data.get("path")
-    content = data.get("content")
-    message = data.get("message", "update by Claude")
-    user = data.get("user")
-    if not all([repo, path, content, user]): return jsonify({"error": "missing fields"}), 400
-    h = github_headers()
-    r = req.get(f"https://api.github.com/repos/{user}/{repo}/contents/{path}", headers=h)
-    payload = {"message": message, "content": base64.b64encode(content.encode()).decode()}
-    if r.status_code == 200: payload["sha"] = r.json()["sha"]
-    r2 = req.put(f"https://api.github.com/repos/{user}/{repo}/contents/{path}", headers=h, json=payload)
-    return jsonify({"ok": r2.status_code in [200,201], "status": r2.status_code})
-
-@app.route("/github/get_file", methods=["POST"])
-def github_get_file():
-    """Claude chiama questo per leggere file da GitHub"""
-    data = request.json or {}
-    if data.get("pw") != PASSWORD: return jsonify({"error": "unauthorized"}), 403
-    h = github_headers()
-    r = req.get(f"https://api.github.com/repos/{data['user']}/{data['repo']}/contents/{data['path']}", headers=h)
-    if r.status_code == 200:
-        content = base64.b64decode(r.json()["content"]).decode()
-        return jsonify({"ok": True, "content": content})
-    return jsonify({"ok": False}), 404
-
-@app.route("/github/actions_status", methods=["POST"])
-def github_actions_status():
-    """Claude chiama questo per controllare lo stato della build"""
-    data = request.json or {}
-    if data.get("pw") != PASSWORD: return jsonify({"error": "unauthorized"}), 403
-    h = github_headers()
-    r = req.get(f"https://api.github.com/repos/{data['user']}/{data['repo']}/actions/runs", headers=h)
-    runs = r.json().get("workflow_runs", [])
-    if not runs: return jsonify({"status": "no runs"})
-    latest = runs[0]
-    return jsonify({"status": latest["status"], "conclusion": latest.get("conclusion"), "run_id": latest["id"], "url": latest["html_url"]})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
